@@ -1,11 +1,12 @@
 # Image needs
 
-The shot list for LabScope's organ renders, and the rules a new one has to follow to sit correctly
-in the interface. The visual identity these serve is [§9.1 of the product
+LabScope's organ renders, and the rules a new one has to follow to sit correctly in the interface.
+The visual identity these serve is [§9.1 of the product
 vision](product-vision.md#91-visual-identity).
 
 Nothing in the app depends on these files existing. A missing render falls back to a monogram in its
-tinted well (`src/ui/PanelArt.tsx`), so the layout is complete today and gets better as files land.
+tinted well (`src/ui/PanelArt.tsx`), so a slug can be added to the match table before its picture
+exists.
 
 ## Where they go
 
@@ -35,48 +36,53 @@ Everything below is what makes a render composite correctly, not just look nice 
 - **No text, no labels, no scale bars, no pointers.** These are objects, not diagrams.
 - **Anatomically plausible but not gory.** The audience is an anxious person checking their own
   results. Aim for "beautiful anatomical model on a shelf", not "specimen".
-- **PNG**, 8-bit, ideally under ~250KB after compression. They are lazy-loaded but there can be a
-  dozen on the results grid at once.
+- **PNG**, 8-bit. The set in the repo lands at 140–330KB each after preparation. They are
+  lazy-loaded but there can be a dozen on the results grid at once.
 
-## Already supplied
+## Preparing a render for the repo
 
-These came with the design direction and are exactly right as reference for everything below.
+Generated renders come out as ~1MB 24-bit PNGs carrying fine film grain, which survives palette
+reduction and roughly doubles the file size for detail no one sees — nothing here is displayed
+above 320 CSS px. [`tools/pack-organs.py`](../tools/pack-organs.py) applies a radius-3 median and
+an adaptive 128-colour palette, which halves the file without touching the painterly forms:
+
+```
+python3 tools/pack-organs.py <source.png> public/organs/<slug>.png …
+```
+
+It needs Pillow, which is not a project dependency — install it in a throwaway virtualenv.
+
+## The set
+
+All fourteen are in `public/organs/`.
 
 | Slug | Subject | Used for |
 | --- | --- | --- |
-| `torso` | The full organ ensemble | Default: any heading that names no organ, and the empty state |
+| `torso` | The full organ ensemble | Default: any heading that names no organ |
 | `lungs` | Lungs with trachea and bronchi | Respiratory, blood gas |
 | `thyroid` | Thyroid gland | Thyroid function, TSH, FT3/FT4 |
-| `stomach` | Stomach with duodenum | Gastro, digestive, H. pylori, pancreatic |
+| `stomach` | Stomach with duodenum | Gastro, digestive, H. pylori |
 | `kidneys` | Pair of kidneys | Renal, urea, creatinine, electrolytes |
 | `liver` | Liver with gallbladder | Liver, hepatic, bilirubin, transaminases |
 | `heart` | Heart | Lipids, cholesterol, cardiac markers |
+| `pancreas` | Pancreas with duodenum | Glucose, HbA1c, amylase, lipase, diabetes panels |
+| `blood` | Filled collection tubes | Haematology, CBC, ESR, coagulation |
+| `chemistry` | A stoppered flask | Biochemistry, general profile, metabolic panel |
+| `bone` | A vertebra in section | Calcium, phosphate, vitamin D, ALP, parathyroid |
+| `immune` | A lymph node cluster | Immunology, allergy, autoantibodies |
+| `urine` | A specimen container | Urinalysis — matched above `kidneys`, which it used to fall to |
+| `empty-state` | The ensemble, sparse and quiet | The results screen with no reports at all |
 
-**These files are not in the repo yet.** They need saving to `public/organs/` at the slugs above
-before any of them show up.
+`empty-state` is not keyword-matched: `MastheadArt` takes a `slug` prop for a screen that has no
+heading to read, and the empty results screen passes it explicitly.
 
-## Still needed
+## Known deviations
 
-Ordered by how often the gap will actually be hit. The first two matter most: haematology and
-general biochemistry are on almost every report, and both currently fall through to `torso`.
-
-1. **`blood`** — a small group of filled blood collection tubes, or a single tube with the same
-   painterly treatment. For haematology, CBC, ESR, coagulation. The most common panel on any report
-   and the one with no organ.
-2. **`chemistry`** — a general biochemistry object: a rack of tubes, or a simple vessel. For
-   "Biochemistry", "General profile", "Metabolic panel". Should read as *the lab*, not as an organ,
-   since these panels span the body.
-3. **`pancreas`** — currently borrows `stomach`. For glucose, HbA1c, amylase, lipase, and the
-   diabetes-related panels, which are common enough to deserve their own object.
-4. **`bone`** — a vertebra or a section of long bone. For calcium, phosphate, vitamin D, ALP,
-   parathyroid — a very common cluster with nowhere sensible to sit today.
-5. **`immune`** — a lymph node cluster or spleen. For immunology, allergy panels, autoantibodies,
-   inflammatory markers.
-6. **`urine`** — a specimen container. For urinalysis, which is a distinct specimen type rather than
-   an organ, and currently lands on `kidneys` by keyword.
-7. **`empty-state`** — the ensemble again, but sparser and quieter: fewer organs, more cream, no
-   focal point. Shown when there are no reports at all, where `torso` currently reads as
-   unintentionally dramatic for a screen that says "nothing here yet".
+- The seven organ renders (`torso`, `lungs`, `thyroid`, `stomach`, `kidneys`, `liver`, `heart`)
+  sit on a background that is darker than the specified `#f5ead8` and carries a soft vignette —
+  corners sample between `#d0be95` and `#ebe1c6`. Under `mix-blend-mode: multiply` this reads as a
+  slightly darker, unevenly lit well than the seven object renders, which are within a shade of
+  spec. Worth re-rendering or flattening the ground the next time the set is touched.
 
 ## Variants worth having later
 

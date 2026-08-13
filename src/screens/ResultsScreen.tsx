@@ -275,7 +275,7 @@ function NoResults({ onAdd }: { onAdd: () => void }) {
           </button>
         </div>
       </div>
-      <MastheadArt label="all results" />
+      <MastheadArt label="all results" slug="empty-state" />
     </div>
   )
 }

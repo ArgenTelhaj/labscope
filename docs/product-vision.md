@@ -535,7 +535,9 @@ subject, the well is the mood — and are composited with `multiply`, which is w
 ground **in both themes** (`--well-calm` / `--well-accent` are deliberately not themed). The renders
 are decoration: `src/ui/PanelArt.tsx` is the only file that maps a heading to a picture, the printed
 heading is always shown beside it, and a missing file degrades to a monogram rather than breaking a
-layout. See `docs/image-needs.md` for the shot list.
+layout. Panels with no anatomical home get an object rather than a guessed organ — tubes for
+haematology, a flask for biochemistry, a specimen container for urinalysis — which keeps the
+grouping honest (§4.5). See `docs/image-needs.md` for the set and the rendering spec.
 
 **Voice.** Warm, plain, gently confident. Numbers over adjectives. Never alarmist, never cutesy.
 "Everything is where your lab said it should be" — a restatement of the reports, not a verdict on the

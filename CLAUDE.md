@@ -51,6 +51,12 @@ Derived from `docs/product-vision.md`; the rationale is there.
 - `tools/parse-check.sh <file.pdf>…` — run the real ingestion pipeline over PDFs on disk and print
   the proposal it produced. The way to check extraction against real reports without clicking
   through the app. Output goes to `.parse-check-out/` (gitignored).
+- `tools/make-samples.py [outdir]` — regenerate the synthetic demo reports in `public/samples/`
+  (`demo-report-*.pdf`): three collection dates for one fictional patient, printed as a real table
+  with section headings, so every panel render, trend, flag and value shape has something to show.
+  No dependencies.
+- `tools/pack-organs.py <src.png> public/organs/<slug>.png …` — prepare a generated organ render for
+  the repo (denoise, palette, ~⅓ the bytes). Needs Pillow; see `docs/image-needs.md`.
 
 No test runner is configured.
 
