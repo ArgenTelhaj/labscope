@@ -1,6 +1,6 @@
-import { formatDate } from '../domain/series'
 import type { Series } from '../domain/series'
-import { formatRange, isPlottable, STATUS_LABEL } from '../domain/value'
+import { formatRange, isPlottable } from '../domain/value'
+import { useI18n } from '../i18n'
 import { ProvenanceChip, StatusChip } from '../ui/Chips'
 import { RangeBand } from '../ui/RangeBand'
 import { TrendChart } from '../ui/TrendChart'
@@ -14,6 +14,7 @@ import { IconInfo } from '../ui/icons'
  * comparability — lab, unit, range, where it was read from — is on the page.
  */
 export function AnalyteScreen({ series }: { series: Series }) {
+  const { t, d } = useI18n()
   const latest = series.latest.observation
   const points = [...series.points].reverse()
   const plottable = series.points.filter((p) => isPlottable(p.observation))
@@ -34,8 +35,8 @@ export function AnalyteScreen({ series }: { series: Series }) {
           {latest.unitRaw && <span className="hero__unit">{latest.unitRaw}</span>}
         </p>
         <p className="note">
-          {formatDate(series.latest.report.collectedAt)} ·{' '}
-          {series.latest.report.performingLab ?? 'Lab not recorded'}
+          {d(series.latest.report.collectedAt)} ·{' '}
+          {series.latest.report.performingLab ?? t('chip.lab-missing')}
         </p>
 
         <div className="bandwrap">
@@ -45,56 +46,48 @@ export function AnalyteScreen({ series }: { series: Series }) {
         <div className="row row--wrap" style={{ gap: 'var(--space-2)' }}>
           <StatusChip observation={latest} />
           <span className="muted">
-            {range ? `Lab’s range ${range}` : STATUS_LABEL.unknown}
+            {range ? t('common.lab-range', { range }) : t('status.long.unknown')}
           </span>
         </div>
 
         {latest.referenceRange.qualifier && (
-          <p className="footnote">Range applies to: {latest.referenceRange.qualifier}</p>
+          <p className="footnote">
+            {t('analyte.qualifier', { qualifier: latest.referenceRange.qualifier })}
+          </p>
         )}
 
         {latest.comparator !== 'eq' && (
-          <p className="footnote">
-            Reported as “{latest.rawValue}” — the exact value is beyond what the assay
-            measures, so the marker is drawn hollow rather than at a precise point.
-          </p>
+          <p className="footnote">{t('analyte.censored', { value: latest.rawValue })}</p>
         )}
       </section>
 
       {plottable.length >= 3 ? (
         <section className="card stack stack--tight">
-          <h2 className="section-title">Over time</h2>
+          <h2 className="section-title">{t('analyte.over-time')}</h2>
           <TrendChart series={series} />
           {plottable.length < series.points.length && (
             <p className="footnote">
-              {series.points.length - plottable.length} result
-              {series.points.length - plottable.length === 1 ? ' is' : 's are'} reported as
-              above or below a limit, or not as a number, and{' '}
-              {series.points.length - plottable.length === 1 ? 'is' : 'are'} not plotted. They
-              are listed below.
+              {t('analyte.not-plotted', { count: series.points.length - plottable.length })}
             </p>
           )}
         </section>
       ) : (
         <section className="card stack stack--tight">
-          <h2 className="section-title">Over time</h2>
+          <h2 className="section-title">{t('analyte.over-time')}</h2>
           {delta !== null ? (
             <>
               <p className="note">
                 {delta === 0
-                  ? 'Unchanged since the previous result.'
-                  : `${delta > 0 ? 'Up' : 'Down'} ${formatDelta(delta)}${
-                      latest.unitRaw ? ` ${latest.unitRaw}` : ''
-                    } since ${formatDate(previous!.report.collectedAt)}.`}
+                  ? t('analyte.unchanged')
+                  : t(delta > 0 ? 'analyte.delta.up' : 'analyte.delta.down', {
+                      delta: `${formatDelta(delta)}${latest.unitRaw ? ` ${latest.unitRaw}` : ''}`,
+                      date: d(previous!.report.collectedAt),
+                    })}
               </p>
-              <p className="footnote">
-                Two results are not a trend. A chart appears from the third result.
-              </p>
+              <p className="footnote">{t('analyte.two-points')}</p>
             </>
           ) : (
-            <p className="note">
-              One result so far. Add another report and the movement appears here.
-            </p>
+            <p className="note">{t('analyte.one-point')}</p>
           )}
         </section>
       )}
@@ -105,9 +98,10 @@ export function AnalyteScreen({ series }: { series: Series }) {
             <IconInfo />
           </span>
           <span>
-            These results come from {series.labs.length} different laboratories
-            ({series.labs.join(', ')}). Different labs can use different methods and different
-            reference ranges, so the values are not always directly comparable.
+            {t('analyte.labs-differ', {
+              count: series.labs.length,
+              labs: series.labs.join(', '),
+            })}
           </span>
         </div>
       )}
@@ -117,14 +111,11 @@ export function AnalyteScreen({ series }: { series: Series }) {
           <span className="banner__icon">
             <IconInfo />
           </span>
-          <span>
-            The unit changes across this history ({series.units.join(', ')}). Values are shown
-            exactly as reported — LabScope does not convert them silently.
-          </span>
+          <span>{t('analyte.units-differ', { units: series.units.join(', ') })}</span>
         </div>
       )}
 
-      <h2 className="section-title">Every result</h2>
+      <h2 className="section-title">{t('analyte.every-result')}</h2>
       <section className="card card--flush">
         {points.map(({ observation, report }) => (
           <div key={observation.id} className="review-item">
@@ -137,20 +128,22 @@ export function AnalyteScreen({ series }: { series: Series }) {
               </span>
               <StatusChip observation={observation} />
             </div>
-            <p className="muted">{formatDate(report.collectedAt)}</p>
+            <p className="muted">{d(report.collectedAt)}</p>
             <div className="row row--wrap" style={{ gap: 'var(--space-2)' }}>
               <ProvenanceChip lab={report.performingLab} entryMode={observation.entryMode} />
               <span className="chip">
-                {formatRange(observation.referenceRange) ?? 'No range printed'}
+                {formatRange(observation.referenceRange) ?? t('analyte.no-range-short')}
               </span>
             </div>
             <p className="footnote">
-              Printed as “{observation.rawLabel}”
+              {t('analyte.printed-as', { label: observation.rawLabel })}
               {observation.source.documentName
                 ? ` · ${observation.source.documentName}${
-                    observation.source.page ? `, page ${observation.source.page}` : ''
+                    observation.source.page
+                      ? `, ${t('analyte.page', { page: observation.source.page })}`
+                      : ''
                   }`
-                : ' · typed in by hand'}
+                : ` · ${t('common.typed-by-hand')}`}
             </p>
             {observation.source.rawLine && (
               <p className="review-item__source">{observation.source.rawLine}</p>
@@ -159,10 +152,7 @@ export function AnalyteScreen({ series }: { series: Series }) {
         ))}
       </section>
 
-      <p className="footnote">
-        LabScope shows what your laboratory reported, including its own flags and ranges. It
-        does not interpret results. Talk to a clinician about what they mean.
-      </p>
+      <p className="footnote">{t('analyte.footnote')}</p>
     </div>
   )
 }

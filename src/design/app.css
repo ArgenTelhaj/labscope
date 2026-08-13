@@ -241,10 +241,70 @@ button {
 
 .sidebar__foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
   font-size: var(--text-xs);
   color: var(--ink-muted);
   line-height: 1.5;
   padding: 0 var(--space-3);
+}
+
+/*
+ * The language switcher: a segmented pair, the chosen language filled. The
+ * choice is carried by fill *and* by `aria-pressed`, so it survives a reader
+ * who cannot see the difference between the two.
+ */
+.langpick {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+}
+
+.langpick__option {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-secondary);
+  transition: transform var(--dur-press) var(--ease-out), background 160ms ease;
+}
+
+.langpick__option:active {
+  transform: scale(0.94);
+}
+
+.langpick__option[aria-pressed='true'] {
+  background: var(--surface-1);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(94, 50, 19, 0.14);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .langpick__option:not([aria-pressed='true']):hover {
+    color: var(--ink);
+  }
+}
+
+/* On desktop the sidebar carries it; the topbar copy is the phone's only one. */
+.topbar__lang {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .topbar__lang {
+    display: block;
+    flex: none;
+  }
 }
 
 .content {

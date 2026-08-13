@@ -88,7 +88,6 @@ export type Panel = {
 }
 
 export const UNGROUPED_PANEL_KEY = '~ungrouped'
-const UNGROUPED_PANEL_LABEL = 'Other results'
 
 export function panelKeyFor(panelRaw: string | null | undefined): string {
   const normalised = (panelRaw ?? '')
@@ -115,7 +114,9 @@ export function buildPanels(series: Series[]): Panel[] {
     const unlabelled = key === UNGROUPED_PANEL_KEY
     panels.push({
       key,
-      label: unlabelled ? UNGROUPED_PANEL_LABEL : (members[0].panelLabel ?? UNGROUPED_PANEL_LABEL),
+      // Unlabelled panels carry no label of their own: the catch-all is named
+      // by the interface, in the reader's language, not by the domain.
+      label: unlabelled ? '' : (members[0].panelLabel ?? ''),
       unlabelled,
       series: members,
       latestDate: members.reduce(
@@ -146,16 +147,3 @@ function unique(values: Array<string | null>): string[] {
   return [...new Set(values.filter((v): v is string => Boolean(v)))]
 }
 
-/** Locale-independent, short, and unambiguous — no US/EU date confusion. */
-export function formatDate(iso: string): string {
-  if (!iso) return 'Date not set'
-  const date = new Date(`${iso}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-export function formatDateShort(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}

@@ -109,8 +109,8 @@ export function parseReport(
     notice:
       observations.length === 0
         ? lines.length === 0
-          ? 'This PDF has no text layer — it is most likely a scan or a photo. Nothing was read from it. Enter the values by hand and keep the file as the source.'
-          : 'Text was read from this PDF, but no lines looked like results. Enter the values by hand and keep the file as the source.'
+          ? 'no-text-layer'
+          : 'no-results-found'
         : null,
   }
 

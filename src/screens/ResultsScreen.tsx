@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
-import { buildPanels, buildSeries, formatDate, type Panel, type Series } from '../domain/series'
+import { buildPanels, buildSeries, type Panel, type Series } from '../domain/series'
 import type { Report } from '../domain/types'
 import { formatRange, statusOf } from '../domain/value'
+import { useI18n, type Translate } from '../i18n'
+import { Marked } from '../ui/Marked'
 import { StatusChip } from '../ui/Chips'
 import { MastheadArt, PanelWell } from '../ui/PanelArt'
 import { PanelStrip } from '../ui/PanelStrip'
@@ -28,6 +30,7 @@ export function ResultsScreen({
   onOpenSeries: (key: string) => void
   onAdd: () => void
 }) {
+  const { t, d } = useI18n()
   const series = useMemo(() => buildSeries(reports), [reports])
   const panels = useMemo(() => buildPanels(series), [series])
   const [openPanel, setOpenPanel] = useState<string | null>(null)
@@ -49,33 +52,27 @@ export function ResultsScreen({
       >
         <div className="masthead__copy">
           <p className={flagged.length > 0 ? 'kicker' : 'kicker kicker--calm'}>
-            {reports.length} report{reports.length === 1 ? '' : 's'} · latest{' '}
-            {formatDate(latestDate(reports))}
+            {t('results.kicker', { count: reports.length, date: d(latestDate(reports)) })}
           </p>
 
           <h2 className="display display--xl">
-            {flagged.length === 0 ? (
-              <>
-                Everything is <span className="display__accent">where your lab said</span> it
-                should be.
-              </>
-            ) : (
-              <>
-                {flagged.length} value{flagged.length === 1 ? '' : 's'}{' '}
-                <span className="display__accent">worth a look.</span>
-              </>
-            )}
+            <Marked
+              className="display__accent"
+              text={
+                flagged.length === 0
+                  ? t('results.headline.calm')
+                  : t('results.headline.watch', { count: flagged.length })
+              }
+            />
           </h2>
 
           <p className="masthead__lede">
-            {flagged.length === 0
-              ? 'None of your latest values sit outside the range printed on the report they came from.'
-              : `The rest of your latest values sit inside the range printed on the report they came from. LabScope shows where they landed — what it means is a conversation with a clinician.`}
+            {flagged.length === 0 ? t('results.lede.calm') : t('results.lede.watch')}
           </p>
 
           <div className="masthead__cta">
             <button type="button" className="btn btn--primary" onClick={onAdd}>
-              Add a report
+              {t('action.add-report')}
             </button>
             {watching.length > 0 && (
               <button
@@ -83,7 +80,7 @@ export function ResultsScreen({
                 className="btn btn--ghost"
                 onClick={() => setOpenPanel(watching[0].key)}
               >
-                Open {watching[0].label}
+                {t('results.open-panel', { label: labelOf(watching[0], t) })}
               </button>
             )}
           </div>
@@ -91,27 +88,25 @@ export function ResultsScreen({
           <div className="stats">
             <div className="stat">
               <p className="stat__num">{series.length}</p>
-              <p className="stat__label">
-                value{series.length === 1 ? '' : 's'} tracked
-              </p>
+              <p className="stat__label">{t('results.stat.values', { count: series.length })}</p>
             </div>
             <div className="stat">
               <p className="stat__num">{panels.length}</p>
-              <p className="stat__label">panel{panels.length === 1 ? '' : 's'}</p>
+              <p className="stat__label">{t('results.stat.panels', { count: panels.length })}</p>
             </div>
             <div className="stat">
               <p className="stat__num">{flagged.length}</p>
-              <p className="stat__label">outside the lab’s range</p>
+              <p className="stat__label">{t('results.stat.flagged')}</p>
             </div>
           </div>
         </div>
 
         <MastheadArt
-          label={watching[0]?.label ?? panels[0].label}
+          label={labelOf(watching[0] ?? panels[0], t)}
           callout={
             watching.length > 0
-              ? `${watching.length} panel${watching.length === 1 ? '' : 's'} to check`
-              : `${series.length - flagged.length} in range`
+              ? t('results.callout.to-check', { count: watching.length })
+              : t('results.callout.in-range', { count: series.length - flagged.length })
           }
         />
       </section>
@@ -124,7 +119,7 @@ export function ResultsScreen({
         />
       ) : (
         <>
-          <h2 className="section-title">Panels, as your reports grouped them</h2>
+          <h2 className="section-title">{t('results.section.panels')}</h2>
           <div className="panelgrid">
             {panels.map((p) => (
               <PanelCard key={p.key} panel={p} onOpen={() => setOpenPanel(p.key)} />
@@ -133,11 +128,7 @@ export function ResultsScreen({
         </>
       )}
 
-      <p className="footnote">
-        Panels are the section headings printed on your own reports — LabScope does not sort
-        results into groups of its own. Values are grouped by the name printed on the report,
-        so two labs that print the same test differently show as two entries.
-      </p>
+      <p className="footnote">{t('results.footnote')}</p>
     </div>
   )
 }
@@ -145,10 +136,12 @@ export function ResultsScreen({
 /* ---------------------------------------------------------------- cards --- */
 
 function PanelCard({ panel, onOpen }: { panel: Panel; onOpen: () => void }) {
+  const { t } = useI18n()
   const watch = panel.series.filter(outside)
   const critical = panel.series.some(
     (s) => statusOf(s.latest.observation) === 'critical',
   )
+  const label = labelOf(panel, t)
 
   return (
     <button
@@ -156,13 +149,13 @@ function PanelCard({ panel, onOpen }: { panel: Panel; onOpen: () => void }) {
       className={`panelcard${watch.length > 0 ? ' card--attention' : ''}`}
       onClick={onOpen}
     >
-      <PanelWell label={panel.label} tone={watch.length > 0 ? 'accent' : 'calm'} />
+      <PanelWell label={label} tone={watch.length > 0 ? 'accent' : 'calm'} />
 
       <div className="panelcard__body">
         <div className="panelcard__head">
-          <span className="panelcard__title">{panel.label}</span>
+          <span className="panelcard__title">{label}</span>
           <span className="panelcard__count">
-            {panel.series.length} value{panel.series.length === 1 ? '' : 's'}
+            {t('panel.count', { count: panel.series.length })}
           </span>
         </div>
 
@@ -170,10 +163,13 @@ function PanelCard({ panel, onOpen }: { panel: Panel; onOpen: () => void }) {
 
         <span className={watch.length > 0 ? 'tag tag--watch' : 'tag tag--calm'}>
           {watch.length === 0
-            ? 'All in range'
+            ? t('panel.tag.calm')
             : critical
-              ? `${watch.length} flagged, ${panel.series.length - watch.length} in range`
-              : `${watch.length} watching`}
+              ? t('panel.tag.critical', {
+                  flagged: watch.length,
+                  rest: panel.series.length - watch.length,
+                })
+              : t('panel.tag.watch', { count: watch.length })}
         </span>
 
         <div className="panelcard__spark">
@@ -194,12 +190,13 @@ function PanelDetail({
   onBack: () => void
   onOpenSeries: (key: string) => void
 }) {
+  const { t, d } = useI18n()
   return (
     <div className="stack enter">
       <div className="row row--between">
-        <h2 className="display display--lg">{panel.label}</h2>
+        <h2 className="display display--lg">{labelOf(panel, t)}</h2>
         <button type="button" className="btn btn--ghost" onClick={onBack}>
-          All panels
+          {t('panel.all')}
         </button>
       </div>
 
@@ -217,9 +214,14 @@ function PanelDetail({
               <div className="result__main">
                 <p className="result__label">{s.displayLabel}</p>
                 <p className="result__meta">
-                  {formatDate(s.latest.report.collectedAt)}
-                  {range ? ` · Lab’s range ${range}` : ' · The report printed no range'}
-                  {s.points.length > 1 ? ` · ${s.points.length} results` : ''}
+                  {d(s.latest.report.collectedAt)}
+                  {' · '}
+                  {range
+                    ? t('common.lab-range', { range })
+                    : t('common.no-range-printed')}
+                  {s.points.length > 1
+                    ? ` · ${t('panel.results-count', { count: s.points.length })}`
+                    : ''}
                 </p>
               </div>
 
@@ -247,40 +249,42 @@ function PanelDetail({
         })}
       </section>
 
-      {panel.unlabelled && (
-        <p className="footnote">
-          These values had no section heading on the report they came from. Add one on the
-          review screen and they move into a panel of their own.
-        </p>
-      )}
+      {panel.unlabelled && <p className="footnote">{t('panel.unlabelled.footnote')}</p>}
     </div>
   )
 }
 
 function NoResults({ onAdd }: { onAdd: () => void }) {
+  const { t } = useI18n()
   return (
     <div className="card masthead enter" data-mood="calm">
       <div className="masthead__copy">
-        <p className="kicker kicker--calm">Nothing here yet</p>
+        <p className="kicker kicker--calm">{t('results.empty.kicker')}</p>
         <h2 className="display display--xl">
-          Your results, <span className="display__accent">as your lab printed them.</span>
+          <Marked className="display__accent" text={t('results.empty.headline')} />
         </h2>
-        <p className="masthead__lede">
-          Add a report and its values appear here, each one against the reference range from
-          that report — never a range borrowed from somewhere else.
-        </p>
+        <p className="masthead__lede">{t('results.empty.lede')}</p>
         <div className="masthead__cta">
           <button type="button" className="btn btn--primary" onClick={onAdd}>
-            Add a report
+            {t('action.add-report')}
           </button>
         </div>
       </div>
-      <MastheadArt label="all results" slug="empty-state" />
+      <MastheadArt label={t('results.empty.art')} slug="empty-state" />
     </div>
   )
 }
 
 /* --------------------------------------------------------------- helpers --- */
+
+/**
+ * A panel is named by the heading its report printed. The catch-all printed no
+ * heading, so it is the one panel the interface names — in the reader's
+ * language, and never as a guess at what those results are.
+ */
+function labelOf(panel: Panel, t: Translate): string {
+  return panel.unlabelled ? t('common.other-results') : panel.label
+}
 
 function outside(s: Series): boolean {
   const status = statusOf(s.latest.observation)

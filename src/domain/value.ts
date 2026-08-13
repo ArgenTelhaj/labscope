@@ -1,6 +1,5 @@
 import type {
   Comparator,
-  LabInterpretation,
   Observation,
   ReferenceRangeSnapshot,
 } from './types'
@@ -113,20 +112,12 @@ export function statusOf(o: Observation): ResultStatus {
   return 'within'
 }
 
-/** Wording used everywhere a status is shown. Neutral: no pass/fail language. */
-export const STATUS_LABEL: Record<ResultStatus, string> = {
-  within: 'Within the lab’s range',
-  outside: 'Outside the lab’s range',
-  critical: 'Flagged critical by the lab',
-  unknown: 'No range on the report',
-}
-
-export const STATUS_SHORT: Record<ResultStatus, string> = {
-  within: 'In range',
-  outside: 'Out of range',
-  critical: 'Critical',
-  unknown: 'No range',
-}
+/*
+ * The wording for a status lives in `src/i18n/labels.ts`, keyed by the value
+ * above (`STATUS_LONG_KEY`, `STATUS_SHORT_KEY`). The domain decides what is
+ * true; the interface decides what that is called, in the reader's language.
+ * It stays neutral in every language: no pass/fail wording.
+ */
 
 /**
  * Position of a value inside its reported range, 0 = low bound, 1 = high bound.
@@ -168,12 +159,4 @@ export function formatRange(range: ReferenceRangeSnapshot): string | null {
 export function formatNumber(n: number): string {
   if (Number.isInteger(n)) return String(n)
   return String(Number(n.toFixed(4)))
-}
-
-export const INTERPRETATION_LABEL: Record<LabInterpretation, string> = {
-  H: 'High (lab flag)',
-  L: 'Low (lab flag)',
-  HH: 'Critically high (lab flag)',
-  LL: 'Critically low (lab flag)',
-  N: 'Normal (lab flag)',
 }

@@ -7,6 +7,8 @@ import { ReportScreen, ReportsScreen } from './screens/ReportsScreen'
 import { ResultsScreen } from './screens/ResultsScreen'
 import { ReviewScreen } from './screens/ReviewScreen'
 import { commitProposal, deleteReport, useReports } from './store/reports'
+import { useI18n, type LabelKey, type Translate } from './i18n'
+import { LanguagePicker } from './ui/LanguagePicker'
 import { IconBack, IconChart, IconDocuments, IconUpload } from './ui/icons'
 
 /**
@@ -23,13 +25,14 @@ type Route =
 
 const TABS = ['results', 'reports', 'add'] as const
 
-const TAB_LABEL: Record<(typeof TABS)[number], string> = {
-  results: 'Results',
-  reports: 'Reports',
-  add: 'Add a report',
+const TAB_LABEL: Record<(typeof TABS)[number], LabelKey> = {
+  results: 'nav.results',
+  reports: 'nav.reports',
+  add: 'nav.add',
 }
 
 export default function App() {
+  const { t } = useI18n()
   const reports = useReports()
   const [route, setRoute] = useState<Route>({ name: 'results' })
   const series = useMemo(() => buildSeries(reports), [reports])
@@ -60,7 +63,7 @@ export default function App() {
         {tab === 'reports' && <IconDocuments />}
         {tab === 'add' && <IconUpload />}
       </span>
-      <span className="navitem__label">{TAB_LABEL[tab]}</span>
+      <span className="navitem__label">{t(TAB_LABEL[tab])}</span>
       {tab === 'results' && reports.length > 0 && (
         <span className="navitem__count">{series.length}</span>
       )}
@@ -76,25 +79,29 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar__brand">
           <span className="sidebar__mark" aria-hidden />
-          <span>LabScope</span>
+          <span>{t('app.name')}</span>
         </div>
-        <nav className="nav" aria-label="Main">
+        <nav className="nav" aria-label={t('app.nav.aria')}>
           {nav}
         </nav>
-        <p className="sidebar__foot">
-          Your reports are stored in this browser. Nothing is uploaded, and results are shown
-          as your laboratory reported them.
-        </p>
+        <div className="sidebar__foot">
+          <LanguagePicker />
+          <p>{t('app.sidebar.foot')}</p>
+        </div>
       </aside>
 
       <div className="content">
         <header className="topbar">
           {back && (
-            <button type="button" className="iconbtn" onClick={back} aria-label="Back">
+            <button type="button" className="iconbtn" onClick={back} aria-label={t('action.back')}>
               <IconBack />
             </button>
           )}
-          <h1 className="topbar__title">{title(route, openSeries?.displayLabel)}</h1>
+          <h1 className="topbar__title">{title(route, t, openSeries?.displayLabel)}</h1>
+          {/* The sidebar carries the switcher on desktop; on a phone there is none. */}
+          <div className="topbar__lang">
+            <LanguagePicker />
+          </div>
         </header>
 
         <main className="screen">
@@ -133,7 +140,7 @@ export default function App() {
             (openSeries ? (
               <AnalyteScreen series={openSeries} />
             ) : (
-              <p className="empty">This value is no longer in your record.</p>
+              <p className="empty">{t('gone.series')}</p>
             ))}
 
           {route.name === 'report' &&
@@ -146,12 +153,12 @@ export default function App() {
                 }}
               />
             ) : (
-              <p className="empty">This report is no longer in your record.</p>
+              <p className="empty">{t('gone.report')}</p>
             ))}
         </main>
       </div>
 
-      <nav className="tabbar" aria-label="Main">
+      <nav className="tabbar" aria-label={t('app.nav.aria')}>
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -163,7 +170,7 @@ export default function App() {
             {tab === 'results' && <IconChart />}
             {tab === 'reports' && <IconDocuments />}
             {tab === 'add' && <IconUpload />}
-            {TAB_LABEL[tab]}
+            {t(TAB_LABEL[tab])}
           </button>
         ))}
       </nav>
@@ -171,20 +178,21 @@ export default function App() {
   )
 }
 
-function title(route: Route, seriesLabel?: string): string {
+function title(route: Route, t: Translate, seriesLabel?: string): string {
   switch (route.name) {
     case 'results':
-      return 'LabScope'
+      return t('title.results')
     case 'reports':
-      return 'Reports'
+      return t('title.reports')
     case 'add':
-      return 'Add a report'
+      return t('title.add')
     case 'review':
-      return 'Check before saving'
+      return t('title.review')
+    // The analyte's own name is printed as the report printed it, untranslated.
     case 'series':
-      return seriesLabel ?? 'Result'
+      return seriesLabel ?? t('title.series')
     case 'report':
-      return 'Report'
+      return t('title.report')
   }
 }
 

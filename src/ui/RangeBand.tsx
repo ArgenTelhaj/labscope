@@ -1,5 +1,6 @@
 import type { Observation } from '../domain/types'
 import { formatNumber, hasRange, statusOf } from '../domain/value'
+import { useI18n, type Translate } from '../i18n'
 import { clamp, domainFor } from './scale'
 
 /**
@@ -10,6 +11,7 @@ import { clamp, domainFor } from './scale'
  * Never rendered when the report printed no range — there is no fallback table.
  */
 export function RangeBand({ observation }: { observation: Observation }) {
+  const { t } = useI18n()
   const { low, high } = observation.referenceRange
   if (!hasRange(observation.referenceRange) || observation.valueNum === null) return null
 
@@ -35,7 +37,7 @@ export function RangeBand({ observation }: { observation: Observation }) {
       <div
         style={{ position: 'relative', height: 18 }}
         role="img"
-        aria-label={rangeAria(observation)}
+        aria-label={rangeAria(observation, t)}
       >
         {/* track */}
         <div
@@ -95,13 +97,16 @@ export function RangeBand({ observation }: { observation: Observation }) {
   )
 }
 
-function rangeAria(o: Observation): string {
+function rangeAria(o: Observation, t: Translate): string {
   const { low, high } = o.referenceRange
-  const bounds =
-    low !== null && high !== null
-      ? `${formatNumber(low)} to ${formatNumber(high)}`
-      : high !== null
-        ? `up to ${formatNumber(high)}`
-        : `from ${formatNumber(low ?? 0)}`
-  return `${o.rawValue} ${o.unitRaw ?? ''} against the lab's reported range of ${bounds}`
+  const value = `${o.rawValue}${o.unitRaw ? ` ${o.unitRaw}` : ''}`
+  if (low !== null && high !== null) {
+    return t('band.aria.between', {
+      value,
+      low: formatNumber(low),
+      high: formatNumber(high),
+    })
+  }
+  if (high !== null) return t('band.aria.up-to', { value, high: formatNumber(high) })
+  return t('band.aria.from', { value, low: formatNumber(low ?? 0) })
 }

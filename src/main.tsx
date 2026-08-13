@@ -9,9 +9,12 @@ import '@fontsource/figtree/latin-600.css'
 import './design/tokens.css'
 import './design/app.css'
 import App from './App.tsx'
+import { I18nProvider } from './i18n/I18nProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <I18nProvider>
+      <App />
+    </I18nProvider>
   </StrictMode>,
 )
