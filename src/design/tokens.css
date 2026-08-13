@@ -1,0 +1,216 @@
+/*
+ * LabScope design tokens.
+ *
+ * The look is warm and physical: a cream ground, two earth accents, soft
+ * shadow instead of hairlines, and semi-realistic organ renders sitting in
+ * tinted wells. See docs/product-vision.md §9 for the rules this encodes and
+ * docs/image-needs.md for the imagery it expects.
+ *
+ * Colour is still a safety channel, not decoration:
+ *  - status is never carried by colour alone — every status ships with a word,
+ *    and a position on the range band
+ *  - sage marks the *range*, which is a printed fact, and the "in range" tag
+ *    that restates it. It is never a verdict, and the wording never says pass
+ *  - alarm is reserved for what the LAB flagged, and is the one hue in the
+ *    system that appears nowhere else
+ *
+ * Both light and dark steps are chosen, not flipped: the dark theme is a warm
+ * espresso, not an inverted cream.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- accent ramps ------------------------------------------------------ */
+  /* Terracotta: the one thing that needs attention, and primary actions. */
+  --terracotta-100: #f6ddc7;
+  --terracotta-200: #ecc09b;
+  --terracotta-400: #d4864a;
+  --terracotta-500: #c67139;
+  --terracotta-700: #96501f;
+  --terracotta-900: #5e3213;
+
+  /* Sage: the calm voice — reference ranges, in-range tags, trend lines. */
+  --sage-100: #e4e8d7;
+  --sage-200: #ccd5b7;
+  --sage-400: #8b9a6d;
+  --sage-500: #7a8a5e;
+  --sage-700: #55643c;
+  --sage-900: #333d23;
+
+  /* Ochre: "check this" — extraction confidence, never a clinical signal. */
+  --ochre-100: #f6e5bd;
+  --ochre-500: #c99a3c;
+  --ochre-700: #8c6717;
+
+  /* --- surfaces & ink ---------------------------------------------------- */
+  --plane: #f5ead8;
+  --surface-1: #fdf7ec;
+  --surface-2: #efe1c9;
+  --ink: #201e1d;
+  --ink-secondary: #4a443c;
+  --ink-muted: #6f6558;
+  --grid: #e3d3b7;
+  --baseline: #cbb692;
+  --border: rgba(32, 30, 29, 0.09);
+  --border-strong: rgba(32, 30, 29, 0.18);
+  --overlay: rgba(32, 30, 29, 0.4);
+
+  /* Accent aliases, so components never reach into a ramp step directly. */
+  --accent: var(--terracotta-500);
+  --accent-ink: var(--terracotta-700);
+  --accent-wash: var(--terracotta-100);
+  --calm: var(--sage-500);
+  --calm-ink: var(--sage-700);
+  --calm-wash: var(--sage-100);
+
+  /*
+   * Image wells are deliberately NOT themed. The organ renders are lit on
+   * cream and composited onto their well with multiply; a dark well would
+   * crush them to silhouettes. So the well keeps its own light ground in both
+   * themes and reads as a lit object sitting on the page.
+   */
+  --well-calm: #e4e8d7;
+  --well-accent: #f6ddc7;
+  --well-calm-ink: #55643c;
+  --well-accent-ink: #96501f;
+
+  /* --- data -------------------------------------------------------------- */
+  /* The trend line and the reported range both read as "what the lab said". */
+  --series-1: var(--sage-700);
+  --series-1-wash: rgba(122, 138, 94, 0.22);
+
+  /* --- status — fixed, never themed by mood ------------------------------ */
+  --status-within: var(--sage-700);
+  --status-outside: var(--terracotta-500);
+  --status-critical: #a3341f;
+  --status-unknown: var(--ink-muted);
+  --status-attention: var(--ochre-500);
+
+  /* --- type -------------------------------------------------------------- */
+  --font-display: 'Caprasimo', 'Iowan Old Style', Georgia, serif;
+  --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-xs: 0.75rem; /* 12 — kickers, meta */
+  --text-sm: 0.875rem; /* 14 */
+  --text-base: 1rem; /* 16 */
+  --text-lg: 1.1875rem; /* 19 */
+
+  /* Display sizes are Caprasimo only. Tight tracking, near-solid leading. */
+  --display-sm: 1.375rem; /* 22 — section headings */
+  --display-md: 1.625rem; /* 26 — card titles */
+  --display-lg: 2.25rem; /* 36 — screen titles, big numbers */
+  --display-xl: 3.25rem; /* 52 — hero */
+
+  --leading-body: 1.55;
+  --leading-display: 0.98;
+  --tracking-display: -0.015em;
+  --tracking-kicker: 0.14em;
+
+  /* --- space & shape ----------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --tap: 44px;
+
+  /* Depth comes from shadow, not from borders. Shadows are warm, never grey. */
+  --shadow-sm: 0 1px 2px rgba(94, 50, 19, 0.05), 0 10px 24px -16px rgba(94, 50, 19, 0.35);
+  --shadow-md: 0 2px 4px rgba(94, 50, 19, 0.06), 0 18px 40px -24px rgba(94, 50, 19, 0.45);
+
+  /* --- motion — strong curves; the built-ins read as accidental ---------- */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-press: 140ms;
+  --dur-enter: 220ms;
+}
+
+/*
+ * Warm dark. The organ renders are lit on cream, so in dark they keep their own
+ * cream well — the well is the object's ground, the page is not.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --terracotta-100: #3d2413;
+    --terracotta-200: #5c3618;
+    --terracotta-400: #dc8b53;
+    --terracotta-500: #dc8b53;
+    --terracotta-700: #edb083;
+    --terracotta-900: #f6ddc7;
+
+    --sage-100: #29301c;
+    --sage-200: #3b4529;
+    --sage-400: #a2b382;
+    --sage-500: #a2b382;
+    --sage-700: #becc9f;
+    --sage-900: #e4e8d7;
+
+    --ochre-100: #3a2d10;
+    --ochre-500: #dcb45f;
+    --ochre-700: #edd398;
+
+    --plane: #1b1613;
+    --surface-1: #241d19;
+    --surface-2: #2f2620;
+    --ink: #f5ead8;
+    --ink-secondary: #d3c5ae;
+    --ink-muted: #a3927c;
+    --grid: #3a2f27;
+    --baseline: #4e4036;
+    --border: rgba(245, 234, 216, 0.1);
+    --border-strong: rgba(245, 234, 216, 0.2);
+    --overlay: rgba(0, 0, 0, 0.62);
+
+    --series-1-wash: rgba(162, 179, 130, 0.2);
+    --status-critical: #e8785c;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -16px rgba(0, 0, 0, 0.8);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45), 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+  }
+}
+
+:root[data-theme='dark'] {
+  --terracotta-100: #3d2413;
+  --terracotta-200: #5c3618;
+  --terracotta-400: #dc8b53;
+  --terracotta-500: #dc8b53;
+  --terracotta-700: #edb083;
+  --terracotta-900: #f6ddc7;
+
+  --sage-100: #29301c;
+  --sage-200: #3b4529;
+  --sage-400: #a2b382;
+  --sage-500: #a2b382;
+  --sage-700: #becc9f;
+  --sage-900: #e4e8d7;
+
+  --ochre-100: #3a2d10;
+  --ochre-500: #dcb45f;
+  --ochre-700: #edd398;
+
+  --plane: #1b1613;
+  --surface-1: #241d19;
+  --surface-2: #2f2620;
+  --ink: #f5ead8;
+  --ink-secondary: #d3c5ae;
+  --ink-muted: #a3927c;
+  --grid: #3a2f27;
+  --baseline: #4e4036;
+  --border: rgba(245, 234, 216, 0.1);
+  --border-strong: rgba(245, 234, 216, 0.2);
+  --overlay: rgba(0, 0, 0, 0.62);
+
+  --series-1-wash: rgba(162, 179, 130, 0.2);
+  --status-critical: #e8785c;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -16px rgba(0, 0, 0, 0.8);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45), 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
