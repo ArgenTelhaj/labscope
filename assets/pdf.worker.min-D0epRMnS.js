@@ -1,0 +1,1 @@
+var e=`/labscope/assets/pdf.worker.min-CHFwMXne.mjs`;export{e as default};
