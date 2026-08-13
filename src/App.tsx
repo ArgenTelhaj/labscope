@@ -1,52 +1,197 @@
-import './App.css'
+import { useMemo, useState } from 'react'
+import { buildSeries } from './domain/series'
+import type { ReportProposal } from './domain/types'
+import { AddScreen } from './screens/AddScreen'
+import { AnalyteScreen } from './screens/AnalyteScreen'
+import { ReportScreen, ReportsScreen } from './screens/ReportsScreen'
+import { ResultsScreen } from './screens/ResultsScreen'
+import { ReviewScreen } from './screens/ReviewScreen'
+import { commitProposal, deleteReport, useReports } from './store/reports'
+import { IconBack, IconChart, IconDocuments, IconUpload } from './ui/icons'
 
-type Marker = {
-  name: string
-  value: number
-  unit: string
-  low: number
-  high: number
+/**
+ * Navigation is held in memory rather than in the URL: a URL carrying an
+ * analyte name is health data in a place it must never be (vision §11).
+ */
+type Route =
+  | { name: 'results' }
+  | { name: 'reports' }
+  | { name: 'add' }
+  | { name: 'review'; proposal: ReportProposal }
+  | { name: 'series'; key: string }
+  | { name: 'report'; id: string }
+
+const TABS = ['results', 'reports', 'add'] as const
+
+const TAB_LABEL: Record<(typeof TABS)[number], string> = {
+  results: 'Results',
+  reports: 'Reports',
+  add: 'Add a report',
 }
 
-// Placeholder data — replace once real results are wired in.
-const markers: Marker[] = [
-  { name: 'Hemoglobin', value: 14.2, unit: 'g/dL', low: 13.5, high: 17.5 },
-  { name: 'Glucose (fasting)', value: 103, unit: 'mg/dL', low: 70, high: 99 },
-  { name: 'Vitamin D', value: 28, unit: 'ng/mL', low: 30, high: 100 },
-  { name: 'TSH', value: 2.1, unit: 'mIU/L', low: 0.4, high: 4.0 },
-]
+export default function App() {
+  const reports = useReports()
+  const [route, setRoute] = useState<Route>({ name: 'results' })
+  const series = useMemo(() => buildSeries(reports), [reports])
 
-function isOutOfRange({ value, low, high }: Marker) {
-  return value < low || value > high
-}
+  const openSeries = route.name === 'series' ? series.find((s) => s.key === route.key) : undefined
+  const openReport =
+    route.name === 'report' ? reports.find((r) => r.id === route.id) : undefined
 
-function App() {
+  const back =
+    route.name === 'series'
+      ? () => setRoute({ name: 'results' })
+      : route.name === 'report'
+        ? () => setRoute({ name: 'reports' })
+        : route.name === 'review'
+          ? () => setRoute({ name: 'add' })
+          : null
+
+  const nav = TABS.map((tab) => (
+    <button
+      key={tab}
+      type="button"
+      className="navitem"
+      aria-current={isCurrent(route, tab) ? 'page' : undefined}
+      onClick={() => setRoute({ name: tab } as Route)}
+    >
+      <span className="navitem__icon">
+        {tab === 'results' && <IconChart />}
+        {tab === 'reports' && <IconDocuments />}
+        {tab === 'add' && <IconUpload />}
+      </span>
+      <span className="navitem__label">{TAB_LABEL[tab]}</span>
+      {tab === 'results' && reports.length > 0 && (
+        <span className="navitem__count">{series.length}</span>
+      )}
+      {tab === 'reports' && reports.length > 0 && (
+        <span className="navitem__count">{reports.length}</span>
+      )}
+    </button>
+  ))
+
   return (
     <div className="app">
-      <header className="app__header">
-        <h1 className="app__title">LabScope</h1>
-        <p className="app__subtitle">Your test results, in plain sight</p>
-      </header>
+      {/* Desktop: a standing left rail. Below 880px it collapses to a bottom bar. */}
+      <aside className="sidebar">
+        <div className="sidebar__brand">
+          <span className="sidebar__mark" aria-hidden />
+          <span>LabScope</span>
+        </div>
+        <nav className="nav" aria-label="Main">
+          {nav}
+        </nav>
+        <p className="sidebar__foot">
+          Your reports are stored in this browser. Nothing is uploaded, and results are shown
+          as your laboratory reported them.
+        </p>
+      </aside>
 
-      <main className="app__main">
-        {markers.map((marker) => (
-          <article
-            key={marker.name}
-            className={`card${isOutOfRange(marker) ? ' card--flagged' : ''}`}
+      <div className="content">
+        <header className="topbar">
+          {back && (
+            <button type="button" className="iconbtn" onClick={back} aria-label="Back">
+              <IconBack />
+            </button>
+          )}
+          <h1 className="topbar__title">{title(route, openSeries?.displayLabel)}</h1>
+        </header>
+
+        <main className="screen">
+          {route.name === 'results' && (
+            <ResultsScreen
+              reports={reports}
+              onOpenSeries={(key) => setRoute({ name: 'series', key })}
+              onAdd={() => setRoute({ name: 'add' })}
+            />
+          )}
+
+          {route.name === 'reports' && (
+            <ReportsScreen
+              reports={reports}
+              onOpenReport={(id) => setRoute({ name: 'report', id })}
+              onAdd={() => setRoute({ name: 'add' })}
+            />
+          )}
+
+          {route.name === 'add' && (
+            <AddScreen onProposal={(proposal) => setRoute({ name: 'review', proposal })} />
+          )}
+
+          {route.name === 'review' && (
+            <ReviewScreen
+              initial={route.proposal}
+              onCancel={() => setRoute({ name: 'add' })}
+              onCommit={(proposal) => {
+                commitProposal(proposal)
+                setRoute({ name: 'results' })
+              }}
+            />
+          )}
+
+          {route.name === 'series' &&
+            (openSeries ? (
+              <AnalyteScreen series={openSeries} />
+            ) : (
+              <p className="empty">This value is no longer in your record.</p>
+            ))}
+
+          {route.name === 'report' &&
+            (openReport ? (
+              <ReportScreen
+                report={openReport}
+                onDelete={() => {
+                  deleteReport(openReport.id)
+                  setRoute({ name: 'reports' })
+                }}
+              />
+            ) : (
+              <p className="empty">This report is no longer in your record.</p>
+            ))}
+        </main>
+      </div>
+
+      <nav className="tabbar" aria-label="Main">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className="tab"
+            aria-current={isCurrent(route, tab) ? 'page' : undefined}
+            onClick={() => setRoute({ name: tab } as Route)}
           >
-            <h2 className="card__label">{marker.name}</h2>
-            <p className="card__value">
-              {marker.value}
-              <span className="card__unit">{marker.unit}</span>
-            </p>
-            <p className="card__range">
-              Reference {marker.low}–{marker.high} {marker.unit}
-            </p>
-          </article>
+            {tab === 'results' && <IconChart />}
+            {tab === 'reports' && <IconDocuments />}
+            {tab === 'add' && <IconUpload />}
+            {TAB_LABEL[tab]}
+          </button>
         ))}
-      </main>
+      </nav>
     </div>
   )
 }
 
-export default App
+function title(route: Route, seriesLabel?: string): string {
+  switch (route.name) {
+    case 'results':
+      return 'LabScope'
+    case 'reports':
+      return 'Reports'
+    case 'add':
+      return 'Add a report'
+    case 'review':
+      return 'Check before saving'
+    case 'series':
+      return seriesLabel ?? 'Result'
+    case 'report':
+      return 'Report'
+  }
+}
+
+function isCurrent(route: Route, tab: (typeof TABS)[number]): boolean {
+  if (route.name === tab) return true
+  if (tab === 'results' && route.name === 'series') return true
+  if (tab === 'reports' && route.name === 'report') return true
+  if (tab === 'add' && route.name === 'review') return true
+  return false
+}

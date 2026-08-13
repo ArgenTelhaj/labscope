@@ -296,6 +296,7 @@ erDiagram
     OBSERVATION {
         id id
         string raw_label "exactly as printed"
+        string panel_raw "section heading above it, as printed"
         string raw_value "exactly as printed"
         enum comparator "eq, lt, gt, lte, gte"
         decimal value_num
@@ -322,7 +323,7 @@ erDiagram
     }
 ```
 
-**The eight decisions encoded above, and why each matters:**
+**The nine decisions encoded above, and why each matters:**
 
 1. **`ACCOUNT` ≠ `SUBJECT`.** One account may manage several subjects (children, parents); one subject may be reachable by several accounts (patient + caregiver + lab). Conflating them makes delegated access impossible to add later without a migration through live health data. This is the single most expensive thing to get wrong.
 2. **`SOURCE_DOCUMENT` is immutable and always retained.** It is the evidence. Never derive-and-discard.
@@ -331,7 +332,13 @@ erDiagram
 5. **`raw_label` / `raw_value` are preserved verbatim** alongside the parsed forms. Every normalisation is reversible and auditable, and mapping bugs found in 2027 can be fixed retroactively because the original string is still there.
 6. **`REFERENCE_RANGE_SNAPSHOT` hangs off the observation, with provenance.** Per §4.1. The `provenance` field is what lets the UI honestly say "this range is from your lab" vs "this is a general reference — your lab did not print one".
 7. **`interpretation` records the lab's own flag**, not yours. If the lab printed "H", you display "H" and attribute it. You are reporting, not deciding.
-8. **`CONTEXT_EVENT` is thin but present from day one.** A medication start date rendered as a vertical line on a trend chart is the highest value-per-line-of-code feature in the entire product.
+8. **`panel_raw` is a captured fact, not a classification.** It is the section heading the report
+   printed above the row — "Thyroid function", "Lipid profile" — read off the document like any
+   other printed string, and null when the report printed none. It is what makes the panel view
+   (§8, L1) *grouping* rather than *inferring* per §4.5: LabScope never decides which panel a
+   result belongs to, and there is no analyte→organ table anywhere in the codebase. Results whose
+   report printed no heading collect under one visible catch-all rather than being placed by guess.
+9. **`CONTEXT_EVENT` is thin but present from day one.** A medication start date rendered as a vertical line on a trend chart is the highest value-per-line-of-code feature in the entire product.
 
 ---
 
@@ -377,6 +384,18 @@ flowchart TD
 ```
 
 **Note the deliberate absence of a fully automatic path.** Even a perfect extraction gets a confirmation screen. It costs the user four seconds, it makes the human the author of their own record, and it moves the failure mode from "the app silently recorded a wrong value" to "the user confirmed what they could see on their own report". That difference is worth more than any accuracy improvement you can buy.
+
+### Layout recovery sits before parsing
+
+"Extract text + layout" above is one box, but it is where most extraction accuracy is won or lost, so it is worth stating what it means. A PDF's text layer is not lines of text — it is positioned glyph runs. Reconstructing rows and columns from those positions is a separate job from understanding what the row says, and doing it badly poisons everything downstream. Three failures are near-universal in real reports, and all three are geometry problems, not parsing problems:
+
+- **Superscripts arrive as separate runs at a different size and baseline.** `10³/uL` is three runs. Naive row grouping puts the exponent on the value's row and wraps `10 /uL` onto a row of its own — so the unit vanishes and the value gains a phantom `3` beside it.
+- **Cells wrap.** A reference cell listing several bands, or a long method name, continues on the next baseline. Those continuation rows have no test name; read as rows in their own right they become junk observations, and the row they belong to loses half its content.
+- **Columns carry meaning that a flattened line destroys.** A report that stamps an application time on every row makes every row look like a date line. Once the columns are known, that is simply the time column, and the reference column can be read as bounds instead of hunting for "the last pair of numbers on the line".
+
+So layout recovery is: group runs into rows by baseline proximity, fold superscripts back into their base, split rows into cells at column-width gaps, and — when the report prints a header row — resolve each cell to a column by which one it overlaps most. The header row is what makes a report a *table*; when there isn't one, fall back to reading each line by shape, and score the result lower.
+
+This is the general case of "known lab template" in the diagram. A template parser is still more accurate for a specific lab, but a report that prints a header row is largely self-describing, and reading it as a table gets most of the benefit without a per-lab rule.
 
 ### Report lifecycle
 
@@ -434,6 +453,30 @@ flowchart LR
 
 **L4 — Report view.** A single visit exactly as issued, with the original document one tap away. This is the trust anchor for the whole app.
 
+**Shell.** LabScope is a **web app first**: a standing left navigation rail (Results · Reports · Add
+a report) beside a centred content column, in the shape any records tool of this kind takes on a
+desktop. The phone layout is the same app under an 880px breakpoint — the rail collapses to a bottom
+bar and rows stack — because §9's "tired person in a waiting room" is a real user, not the only one.
+
+**What the MVP ships (August 2026).** L0 (Reports), L1 (the panel grid), L2 (the values inside one
+panel), L3 (analyte detail with the trend chart) and L4 (report view, listing the values as issued).
+The anatomical map and the heat strip are not built. L4 links back to the *filename and text line* a
+value was read from rather than to the stored document — the original file is not yet retained,
+because there is no storage layer; that is the first gap to close in P1.
+
+**How L1 groups.** The panel a result belongs to is the section heading its own report printed above
+it (`OBSERVATION.panel_raw`, §6). Only the table-reading path in `src/ingest/columns.ts` can see
+headings, so reports read line-by-line arrive unheaded; those results collect under **Other
+results**, and the reviewer can type a heading in on the review screen. This keeps §4.5's line
+intact — the grouping is transcribed, never inferred — at the cost of a grid that is only as
+organised as the report was. That trade is the right way round: an honest catch-all beats a
+confident wrong panel.
+
+Each card carries the panel's own name, a count, the first few values as printed, a tag counting how
+many sit outside their reported range, and a 40px strip of one mark per value positioned inside the
+range *that* value's lab printed. There is deliberately no sparkline across a panel: analytes in one
+panel share no unit and no scale, so a single line through them would mean nothing.
+
 **Cross-cutting: the multi-analyte heat strip.** Analytes as rows, reports as columns, each cell positioned relative to its own reported range on a normalised scale. Ten years of a chronic patient's history on one screen. It is the single most information-dense view possible here, it composes with the zoom axis rather than competing, and almost no consumer product offers it. Strong candidate for the signature view — with the caveat that a normalised position is a light interpretive step and needs careful labelling.
 
 ### A caution on charts
@@ -463,6 +506,46 @@ This is where "medical design system" earns its name — it is a safety system w
 10. **Localisation from the schema up.** Analyte display names, units, and date formats are locale-dependent, and lab reports arrive in the local language. This is a data-model concern, not a string-file concern.
 
 **Core components** (roughly the build order): value card with range band · range band primitive (positional, the atom of the system) · sparkline · analyte trend chart · panel table · timeline row · document viewer with region highlight · review/correction form · confidence chip · provenance chip · context-event marker · share sheet · empty and low-data states (which you will show more often than you expect, and which most apps neglect).
+
+### 9.1 Visual identity
+
+The principles above say what the system must never do. This says what it looks like. Tokens live in
+`src/design/tokens.css`; no component hard-codes a colour.
+
+**Palette.** A cream ground (`#f5ead8`), near-black ink (`#201e1d`), and two earth accents:
+**terracotta** (`#c67139`) for the one thing that needs attention, primary actions and kickers, and
+**sage** (`#7a8a5e`) for the calm voice — reference-range bands, in-range tags, trend lines. Each
+accent has a light 100-step used for tinted fills. No blue, no neon, no cool grey. One hue is held
+back: the **lab's critical flag** (`#a3341f`), which appears nowhere else in the system, so it still
+means something on the twentieth report.
+
+**Type.** Caprasimo for display — screen titles, card titles, values, the hero — always large,
+tracking −0.015em, leading 0.98. Figtree for body and UI at 14–19px, leading 1.55. Kickers are 12px
+Figtree, uppercase, 0.14em, in terracotta-700. Caprasimo is never used below 22px; at small sizes
+its counters close up and it reads as noise.
+
+**Shape.** 16px radii on containers, 999px pills on buttons, tags, inputs and nav items. Depth comes
+from a warm soft shadow, not from borders — there are no card borders and exactly one 1px rule, above
+the hero's stat row. The single exception is the card that needs attention, which takes a 2px
+terracotta outline *in addition to* its word-carrying tag, never instead of it.
+
+**Imagery.** Semi-realistic 3D organ renders, lit from the upper left on cream, matte and painterly,
+each isolated with breathing room. They sit in tinted circular or rounded wells — the image is the
+subject, the well is the mood — and are composited with `multiply`, which is why wells keep a light
+ground **in both themes** (`--well-calm` / `--well-accent` are deliberately not themed). The renders
+are decoration: `src/ui/PanelArt.tsx` is the only file that maps a heading to a picture, the printed
+heading is always shown beside it, and a missing file degrades to a monogram rather than breaking a
+layout. See `docs/image-needs.md` for the shot list.
+
+**Voice.** Warm, plain, gently confident. Numbers over adjectives. Never alarmist, never cutesy.
+"Everything is where your lab said it should be" — a restatement of the reports, not a verdict on the
+person.
+
+**An amendment to principle 3.** Sage now marks in-range values, which is closer to a "good" colour
+than the original system allowed. The line held is in the *wording*: the tag says "In range", never
+"Good" or "Normal-for-you", and the sage is anchored to the range band — a printed fact — rather than
+to a judgement. Terracotta means "outside the range your lab printed", not "bad". If the wording ever
+drifts toward pass/fail, the colour has to go.
 
 ---
 
@@ -560,13 +643,29 @@ flowchart LR
     style P5 fill:#7f1d1d,color:#fff
 ```
 
+**Status, August 2026.** P0 is built as a local-only client: the domain model in `src/domain`,
+manual entry, the timeline, analyte detail, and the design-system atoms (range band, sparkline,
+trend chart, status/provenance/confidence chips). Part of P1 is built ahead of schedule and
+deliberately narrow: PDF *text-layer* extraction runs in the browser (`src/ingest`), feeding the
+review-and-correct flow. Still missing from P1: OCR for scans and photos (needs a backend), the
+source-document viewer with region highlight (needs document storage), and per-field rather than
+per-row confidence.
+
+The **panels / system view** from P2 is built, ahead of the rest of P2, because the visual identity
+(§9.1) needs a grouping to hang its imagery on. It grows no new interpretation: the panel is the
+heading the report printed (§6, decision 8). The heat strip, context events and the one-pager PDF
+are still ahead. Still open in P2: `src/ingest`'s line-reading fallback cannot see section headings,
+so reports it handles arrive unheaded.
+
 **P0 is deliberately unglamorous and deliberately first.** Manual entry with no OCR proves the entire model — identity, units, ranges, provenance, history, the design system — against real reports, with zero extraction risk. If manual entry of one report is not pleasant and fast, the app is not viable no matter how good the OCR gets. It is also the honest fallback forever: extraction will never be 100%.
 
 ---
 
 ## 14. What this means for the code that exists today
 
-`src/App.tsx` should be treated as a throwaway visual sketch, and its `Marker` type is worth keeping as a list of what to fix:
+**Done (August 2026): the placeholder `markers` array and its invented ranges are deleted**, and the
+app is built on the model in §6. The old `Marker` type is kept here only as the list of mistakes it
+encoded, because they are the mistakes any lab app drifts back into:
 
 ```ts
 type Marker = {
@@ -580,13 +679,30 @@ type Marker = {
 // the source document, entry mode, confidence, and the subject it belongs to.
 ```
 
-Concrete next steps, in order:
+### What the MVP does and does not do
 
-1. **Delete the placeholder `markers` array and its invented ranges** (README and CLAUDE.md both already flag this). Nothing that ships should contain an unsourced range, not even as a demo.
-2. **Write the type layer for the §6 model first**, in TypeScript, with no UI. It is cheap, and it will surface the ambiguities in this document faster than any prototype.
-3. **Build manual entry + timeline + analyte detail** against that model, with local persistence, before choosing a backend.
-4. **Test it on your own real reports.** Collect 20–30 real PDFs from as many different labs as you can, and hand-enter them. You will learn more about the domain in that exercise than from any further planning, and you will have your extraction test corpus.
-5. **Then, and only then**, decide the backend and start on extraction.
+| Concern | How the MVP handles it |
+|---|---|
+| Reference ranges | Read from the report and stored on the observation with `provenance`. No fallback table exists in the codebase. A report with no printed range shows “No range on the report”. |
+| Raw fidelity | `rawLabel` and `rawValue` are stored and displayed verbatim; parsed forms sit beside them. `0,92` stays `0,92` on screen. |
+| Time axis | `collectedAt`, required before a report can be saved, and always editable in review. |
+| Value kinds | Numeric, censored (`<0.01` — plotted as a hollow marker, excluded from the trend line), and text (“Negative”). |
+| Lab flags | Captured as printed (H/L/HH/LL/N) and used ahead of our own comparison. We never invent a flag. |
+| Analyte identity | **Not solved.** Series are grouped by the normalised printed label; the UI says so. LOINC mapping and UCUM coding are still open. |
+| Units | Stored as printed. No conversion at all — a unit change across a series raises a visible notice. |
+| Extraction | Deterministic, text-layer-only, in-browser. Two strategies: reports that print a header row are read as a **table**, cell by column (§7); everything else falls back to reading each line by shape, and scores lower. It proposes; the review screen commits. Scans, photos and password-protected PDFs fall back to manual entry with the reason stated. |
+| Multi-band reference cells | Labs often print the reference column as several bands (`0 - 100 Vlere e deshiruar` / `100-129 Risk mesatar` / `>130 Risk i larte`). The **first** band becomes the range; the rest is kept verbatim as the range qualifier. Choosing between the bands would be interpretation, so we don't. |
+| Lab verdict columns | A "Result words" / "Vleresimi" column is translated into the lab's flag (Albanian and English). "Very high" is still `H` — only a word that actually says critical produces `HH`/`LL`. |
+| Storage | `localStorage` in the browser. No backend, no network, no analytics — and no source document retained, only its filename and the text line each value came from. |
+| Interpretation | None. No scores, no explanations, no “what this means”. |
+
+### Concrete next steps, in order
+
+1. **Test it on real reports.** *Started.* Two real reports from one Albanian lab (a lipid panel and a CBC, bilingual EN/SQ, seven columns) now read completely and correctly — 8/8 and 24/24 values with units, ranges, qualifiers and the lab's own flags. They are what produced the table strategy in §7; before it, the lipid panel yielded **zero** values. Both are the patient's own health data and are deliberately **not** committed to this repo — run them through `tools/parse-check.sh` from wherever they live. Still needed: 20–30 PDFs from as many different labs as possible, which is what produces the honest accuracy number and shows which template parsers are worth writing.
+2. **Retain the source document** and show the value next to its own pixels. Today the provenance trail stops at the filename and the text line; the trust story needs the page.
+3. **Decide the backend** (§12) — storage, async ingestion, auth — and move persistence off `localStorage`, which is per-browser, unencrypted and one cleared cache away from gone.
+4. **Canonical analyte identity** (LOINC) and UCUM units, so a series survives two labs printing the same test under different names.
+5. **Then** OCR for scans, which is where the real-world volume is.
 
 ---
 
@@ -596,7 +712,7 @@ These change the architecture, so they're worth deciding early rather than disco
 
 1. **Geography.** EU-first, US, or a specific country? This sets the compliance regime, the units (mmol/L vs mg/dL), and the report formats you must parse. It is the highest-leverage answer on this list.
 2. **Which side pays?** Patient subscription, lab licence, or lab pays for patient access? It decides whether you're a controller or a processor and shapes the whole authorisation model.
-3. **How much do you already know about specific labs?** If you have access to real report templates from one or two labs — especially local ones — that is a serious head start and changes the extraction plan from "general" to "deterministic for 80% of volume".
+3. **How much more of this lab's volume can you get, and which other labs matter?** Partly answered: real reports from one Albanian lab are in hand and drove the table strategy (§7, §14). What is still unknown is whether that lab covers enough of your volume to justify a template parser of its own, and which other labs — and which of their report types (microbiology, histopathology, and other non-tabular formats) — need to work.
 4. **Solo build or a team?** The roadmap above is different work at 1 developer vs 4.
 5. **What is your appetite for the regulated path**, long term? If interpretation is the eventual destination, some architecture decisions (traceability, validation, versioning of any derived value) should be made now even though the feature is far away.
 6. **Is there a clinician available to you** for review? One friendly physician or lab scientist reviewing your grouping, wording, and flag logic is worth more than any amount of desk research — including this document.
