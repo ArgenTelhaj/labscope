@@ -121,7 +121,7 @@ function Art({
   return (
     <img
       className={className}
-      src={`/organs/${slug ?? artFor(label)}.png`}
+      src={`${import.meta.env.BASE_URL}organs/${slug ?? artFor(label)}.png`}
       alt=""
       loading="lazy"
       decoding="async"

@@ -2,13 +2,13 @@
   "name": "LabScope",
   "short_name": "LabScope",
   "description": "Visualize and track your medical test results over time.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#f5ead8",
   "theme_color": "#f5ead8",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
