@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Series, SeriesPoint } from '../domain/series'
-import { formatDateShort } from '../domain/series'
 import { formatNumber, isPlottable, statusOf } from '../domain/value'
+import { useI18n } from '../i18n'
 import { clamp, domainFor } from './scale'
 
 /**
@@ -22,6 +22,7 @@ const H = 190
 const PAD = { top: 14, right: 16, bottom: 26, left: 38 }
 
 export function TrendChart({ series }: { series: Series }) {
+  const { t, dShort } = useI18n()
   const [active, setActive] = useState<number | null>(null)
 
   const points = series.points.filter((p) => isPlottable(p.observation))
@@ -32,8 +33,8 @@ export function TrendChart({ series }: { series: Series }) {
   const tMax = Math.max(...times)
   const [yMin, yMax] = yDomain(points)
 
-  const x = (t: number) =>
-    PAD.left + ((t - tMin) / (tMax - tMin || 1)) * (W - PAD.left - PAD.right)
+  const x = (time: number) =>
+    PAD.left + ((time - tMin) / (tMax - tMin || 1)) * (W - PAD.left - PAD.right)
   const y = (v: number) =>
     H - PAD.bottom - ((v - yMin) / (yMax - yMin || 1)) * (H - PAD.top - PAD.bottom)
 
@@ -61,7 +62,7 @@ export function TrendChart({ series }: { series: Series }) {
         className="chart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${series.displayLabel} over time, ${points.length} results`}
+        aria-label={t('chart.aria', { label: series.displayLabel, count: points.length })}
         onPointerLeave={() => setActive(null)}
       >
         {/* the lab's reported range, per point */}
@@ -127,7 +128,7 @@ export function TrendChart({ series }: { series: Series }) {
                 fill="var(--ink-muted)"
                 fontFamily="var(--font)"
               >
-                new lab
+                {t('chart.new-lab')}
               </text>
             </g>
           )
@@ -168,17 +169,17 @@ export function TrendChart({ series }: { series: Series }) {
         })}
 
         {/* y ticks: the range bounds carry the scale */}
-        {yTicks(latestRange.low, latestRange.high, yMin, yMax).map((t) => (
+        {yTicks(latestRange.low, latestRange.high, yMin, yMax).map((tick) => (
           <text
-            key={`tick${t}`}
+            key={`tick${tick}`}
             x={PAD.left - 6}
-            y={y(t) + 3}
+            y={y(tick) + 3}
             fontSize={9}
             textAnchor="end"
             fill="var(--ink-muted)"
             fontFamily="var(--font)"
           >
-            {formatNumber(t)}
+            {formatNumber(tick)}
           </text>
         ))}
 
@@ -190,7 +191,7 @@ export function TrendChart({ series }: { series: Series }) {
           fill="var(--ink-muted)"
           fontFamily="var(--font)"
         >
-          {formatDateShort(points[0].report.collectedAt)}
+          {dShort(points[0].report.collectedAt)}
         </text>
         <text
           x={W - PAD.right}
@@ -200,7 +201,7 @@ export function TrendChart({ series }: { series: Series }) {
           fill="var(--ink-muted)"
           fontFamily="var(--font)"
         >
-          {formatDateShort(points[points.length - 1].report.collectedAt)}
+          {dShort(points[points.length - 1].report.collectedAt)}
         </text>
 
         {activePoint && (
@@ -221,7 +222,7 @@ export function TrendChart({ series }: { series: Series }) {
                     ? ` ${activePoint.point.observation.unitRaw}`
                     : ''
                 }`,
-                formatDateShort(activePoint.point.report.collectedAt),
+                dShort(activePoint.point.report.collectedAt),
               ]}
             />
           </g>
@@ -231,11 +232,11 @@ export function TrendChart({ series }: { series: Series }) {
       <figcaption className="legend" style={{ marginTop: 'var(--space-2)' }}>
         <span className="legend__item">
           <span className="legend__swatch" />
-          As reported
+          {t('chart.legend.reported')}
         </span>
         <span className="legend__item">
           <span className="legend__swatch legend__swatch--band" />
-          Range printed by the lab
+          {t('chart.legend.band')}
         </span>
       </figcaption>
     </figure>

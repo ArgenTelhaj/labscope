@@ -1,5 +1,6 @@
 import type { Observation } from '../domain/types'
-import { INTERPRETATION_LABEL, STATUS_SHORT, statusOf } from '../domain/value'
+import { statusOf } from '../domain/value'
+import { INTERPRETATION_KEY, STATUS_SHORT_KEY, useI18n } from '../i18n'
 import { IconAlert } from './icons'
 
 /**
@@ -7,6 +8,7 @@ import { IconAlert } from './icons'
  * signals attention (vision §9, principle 1).
  */
 export function StatusChip({ observation }: { observation: Observation }) {
+  const { t } = useI18n()
   const status = statusOf(observation)
   const modifier =
     status === 'critical'
@@ -19,7 +21,7 @@ export function StatusChip({ observation }: { observation: Observation }) {
 
   const title =
     observation.interpretation !== null
-      ? INTERPRETATION_LABEL[observation.interpretation]
+      ? t(INTERPRETATION_KEY[observation.interpretation])
       : undefined
 
   return (
@@ -29,7 +31,7 @@ export function StatusChip({ observation }: { observation: Observation }) {
           <IconAlert />
         </span>
       )}
-      {STATUS_SHORT[status]}
+      {t(STATUS_SHORT_KEY[status])}
     </span>
   )
 }
@@ -42,24 +44,25 @@ export function ProvenanceChip({
   lab: string | null
   entryMode?: Observation['entryMode']
 }) {
-  const label = lab ?? 'Lab not recorded'
+  const { t } = useI18n()
   return (
     <span className="chip">
-      {label}
-      {entryMode === 'manual' ? ' · typed in' : ''}
+      {lab ?? t('chip.lab-missing')}
+      {entryMode === 'manual' ? ` · ${t('chip.typed-in')}` : ''}
     </span>
   )
 }
 
 /** Shown only where confidence is low enough to deserve a second look. */
 export function ConfidenceChip({ confidence }: { confidence: number }) {
+  const { t } = useI18n()
   if (confidence >= 0.75) return null
   return (
     <span className="chip chip--attention">
       <span className="chip__icon" style={{ display: 'inline-flex' }}>
         <IconAlert />
       </span>
-      Check this
+      {t('chip.check-this')}
     </span>
   )
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { LabInterpretation, ObservationProposal, ReportProposal } from '../domain/types'
 import { ConfidenceChip } from '../ui/Chips'
+import { NOTICE_KEY, useI18n } from '../i18n'
 import { IconInfo, IconTrash } from '../ui/icons'
 import { blankObservation } from '../ingest/proposal'
 
@@ -19,6 +20,7 @@ export function ReviewScreen({
   onCommit: (proposal: ReportProposal) => void
   onCancel: () => void
 }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState<ReportProposal>(initial)
 
   const included = draft.observations.filter(
@@ -43,16 +45,16 @@ export function ReviewScreen({
           <span className="banner__icon">
             <IconInfo />
           </span>
-          <span>{draft.notice}</span>
+          <span>{t(NOTICE_KEY[draft.notice])}</span>
         </div>
       )}
 
       <section className="card stack">
-        <h2 className="section-title">This report</h2>
+        <h2 className="section-title">{t('review.this-report')}</h2>
 
         <div className="field">
           <label className="field__label" htmlFor="collected">
-            Collection date — the date the sample was taken
+            {t('review.collected.label')}
           </label>
           <input
             id="collected"
@@ -61,16 +63,13 @@ export function ReviewScreen({
             value={draft.collectedAt}
             onChange={(e) => setDraft({ ...draft, collectedAt: e.target.value })}
           />
-          <span className="footnote">
-            Not the date you uploaded it. Everything is placed on this date, so it is worth
-            checking against the report.
-          </span>
+          <span className="footnote">{t('review.collected.hint')}</span>
         </div>
 
         <div className="grid-2">
           <div className="field">
             <label className="field__label" htmlFor="reported">
-              Report date
+              {t('review.reported.label')}
             </label>
             <input
               id="reported"
@@ -82,7 +81,7 @@ export function ReviewScreen({
           </div>
           <div className="field">
             <label className="field__label" htmlFor="fasting">
-              Fasting
+              {t('review.fasting.label')}
             </label>
             <select
               id="fasting"
@@ -95,43 +94,43 @@ export function ReviewScreen({
                 })
               }
             >
-              <option value="">Not stated</option>
-              <option value="yes">Fasting</option>
-              <option value="no">Not fasting</option>
+              <option value="">{t('review.fasting.unstated')}</option>
+              <option value="yes">{t('review.fasting.yes')}</option>
+              <option value="no">{t('review.fasting.no')}</option>
             </select>
           </div>
         </div>
 
         <div className="field">
           <label className="field__label" htmlFor="lab">
-            Performing laboratory
+            {t('review.lab.label')}
           </label>
           <input
             id="lab"
             className="input"
             value={draft.performingLab}
-            placeholder="As printed on the report"
+            placeholder={t('review.lab.placeholder')}
             onChange={(e) => setDraft({ ...draft, performingLab: e.target.value })}
           />
         </div>
 
         {draft.documentName && (
-          <p className="footnote">Source document: {draft.documentName}</p>
+          <p className="footnote">
+            {t('review.source-document', { name: draft.documentName })}
+          </p>
         )}
       </section>
 
       <div className="row row--between">
-        <h2 className="section-title">
-          {included.length} value{included.length === 1 ? '' : 's'} to save
-        </h2>
+        <h2 className="section-title">{t('review.to-save', { count: included.length })}</h2>
         {needsAttention > 0 && (
-          <span className="muted">{needsAttention} to check</span>
+          <span className="muted">{t('review.to-check', { count: needsAttention })}</span>
         )}
       </div>
 
       <section className="card card--flush">
         {sortedKeys.length === 0 && (
-          <p className="empty">Nothing to review yet.</p>
+          <p className="empty">{t('review.nothing-yet')}</p>
         )}
         {draft.observations.map((o) => (
           <div className="review-item" key={o.key} data-included={o.include}>
@@ -142,14 +141,16 @@ export function ReviewScreen({
                   checked={o.include}
                   onChange={(e) => patch(o.key, { include: e.target.checked })}
                 />
-                <span className="muted">{o.include ? 'Save this' : 'Skipped'}</span>
+                <span className="muted">
+                  {o.include ? t('review.save-this') : t('review.skipped')}
+                </span>
               </label>
               <div className="row" style={{ gap: 'var(--space-2)' }}>
                 <ConfidenceChip confidence={o.confidence} />
                 <button
                   type="button"
                   className="iconbtn"
-                  aria-label="Remove this row"
+                  aria-label={t('review.remove-row')}
                   onClick={() =>
                     setDraft((d) => ({
                       ...d,
@@ -166,15 +167,15 @@ export function ReviewScreen({
               <input
                 className="input input--sm"
                 value={o.rawLabel}
-                placeholder="Test name, exactly as printed"
-                aria-label="Test name"
+                placeholder={t('review.field.name.placeholder')}
+                aria-label={t('review.field.name')}
                 onChange={(e) => patch(o.key, { rawLabel: e.target.value })}
               />
               <input
                 className="input input--sm"
                 value={o.panelRaw}
-                placeholder="Section heading"
-                aria-label="Section heading printed above this test"
+                placeholder={t('review.field.panel')}
+                aria-label={t('review.field.panel.aria')}
                 onChange={(e) => patch(o.key, { panelRaw: e.target.value })}
               />
             </div>
@@ -183,29 +184,29 @@ export function ReviewScreen({
               <input
                 className="input input--sm"
                 value={o.rawValue}
-                placeholder="Value"
-                aria-label="Value"
+                placeholder={t('review.field.value')}
+                aria-label={t('review.field.value')}
                 inputMode="text"
                 onChange={(e) => patch(o.key, { rawValue: e.target.value })}
               />
               <input
                 className="input input--sm"
                 value={o.unitRaw}
-                placeholder="Unit"
-                aria-label="Unit"
+                placeholder={t('review.field.unit')}
+                aria-label={t('review.field.unit')}
                 onChange={(e) => patch(o.key, { unitRaw: e.target.value })}
               />
               <select
                 className="input input--sm"
                 value={o.interpretation ?? ''}
-                aria-label="Flag printed by the lab"
+                aria-label={t('review.field.flag.aria')}
                 onChange={(e) =>
                   patch(o.key, {
                     interpretation: (e.target.value || null) as LabInterpretation | null,
                   })
                 }
               >
-                <option value="">No flag</option>
+                <option value="">{t('review.field.flag.none')}</option>
                 <option value="H">H</option>
                 <option value="L">L</option>
                 <option value="HH">HH</option>
@@ -218,30 +219,30 @@ export function ReviewScreen({
               <input
                 className="input input--sm"
                 value={o.rangeLow}
-                placeholder="Range low"
-                aria-label="Reference range low, as printed"
+                placeholder={t('review.field.range-low')}
+                aria-label={t('review.field.range-low.aria')}
                 inputMode="decimal"
                 onChange={(e) => patch(o.key, { rangeLow: e.target.value })}
               />
               <input
                 className="input input--sm"
                 value={o.rangeHigh}
-                placeholder="Range high"
-                aria-label="Reference range high, as printed"
+                placeholder={t('review.field.range-high')}
+                aria-label={t('review.field.range-high.aria')}
                 inputMode="decimal"
                 onChange={(e) => patch(o.key, { rangeHigh: e.target.value })}
               />
               <input
                 className="input input--sm"
                 value={o.rangeQualifier}
-                placeholder="e.g. adult male"
-                aria-label="Range qualifier, as printed"
+                placeholder={t('review.field.qualifier.placeholder')}
+                aria-label={t('review.field.qualifier.aria')}
                 onChange={(e) => patch(o.key, { rangeQualifier: e.target.value })}
               />
             </div>
 
             {o.source.rawLine && (
-              <p className="review-item__source" title="The line this was read from">
+              <p className="review-item__source" title={t('review.source-line')}>
                 {o.source.rawLine}
               </p>
             )}
@@ -262,20 +263,14 @@ export function ReviewScreen({
           }))
         }
       >
-        Add another value
+        {t('review.add-value')}
       </button>
 
-      <p className="footnote">
-        Values and ranges are saved exactly as you confirm them here, alongside the line they
-        were read from. If your report printed no reference range, leave the range blank —
-        LabScope will say so rather than substitute one. The section heading is only used to
-        group results the way your report grouped them; leave it blank and the value sits
-        under “Other results”.
-      </p>
+      <p className="footnote">{t('review.footnote')}</p>
 
       <div className="row" style={{ gap: 'var(--space-3)' }}>
         <button type="button" className="btn btn--ghost" onClick={onCancel}>
-          Discard
+          {t('review.discard')}
         </button>
         <button
           type="button"
@@ -284,13 +279,11 @@ export function ReviewScreen({
           disabled={!canCommit}
           onClick={() => onCommit(draft)}
         >
-          Save {included.length} value{included.length === 1 ? '' : 's'}
+          {t('review.save', { count: included.length })}
         </button>
       </div>
       {!canCommit && (
-        <p className="footnote">
-          A collection date and at least one value with a name are needed before saving.
-        </p>
+        <p className="footnote">{t('review.cannot-save')}</p>
       )}
     </div>
   )

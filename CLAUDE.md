@@ -40,6 +40,11 @@ Derived from `docs/product-vision.md`; the rationale is there.
 - Interpretation flags come from the lab (H/L/critical); the app reports them, it does not decide them.
 - Extraction proposes, a human commits. Every data point links back to its source document.
 - The app displays and organises; it does not diagnose, score, or recommend.
+- **Interface text is translated; report content never is.** Every string the app says in its own
+  voice is a label in `src/i18n/labels.ts` — no literal user-facing text in a component. Anything
+  read off a report (analyte name, value, unit, section heading, performing lab, qualifier) is shown
+  exactly as printed, in every language. `src/domain` and `src/ingest` hold no interface text: they
+  emit values and codes, and the catalogue names them.
 - No health data in logs, analytics, error trackers, or URL parameters.
 
 ## Commands
@@ -83,6 +88,11 @@ Current state: MVP of the upload → review → graphical view flow, client-only
     matching each line by shape. Also dates, flags and the performing lab.
 - `src/store/reports.ts` — `localStorage` persistence, and the commit step that turns a reviewed
   proposal into a record.
+- `src/i18n` — the label system (vision §9.2). `labels.ts` is the whole catalogue: one entry per
+  label, each with a main value (English) and its translations, `{name}` for variables, `[[…]]` for
+  the stretch a headline sets apart, `{ one, other }` for counts. `locale.ts` lists the languages,
+  `dates.ts` formats dates per locale, `index.ts` resolves a label, `I18nProvider.tsx` holds the
+  choice. Components read text through `useI18n()` — `t` for labels, `d`/`dShort`/`dStamp` for dates.
 - `src/design` — tokens and component CSS. Status is never carried by colour alone. The visual
   identity (cream/terracotta/sage, Caprasimo + Figtree, pills and soft shadow) is vision §9.1;
   nothing outside `tokens.css` hard-codes a colour.

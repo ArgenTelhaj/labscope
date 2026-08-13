@@ -119,6 +119,13 @@ export type ObservationProposal = {
   source: SourceRegion
 }
 
+/**
+ * What ingestion has to say about a proposal it could not fill. A code, not a
+ * sentence: the wording lives in `src/i18n/labels.ts` so it can be read in the
+ * reader's own language.
+ */
+export type ProposalNotice = 'no-text-layer' | 'no-results-found' | 'needs-ocr'
+
 export type ReportProposal = {
   collectedAt: string
   reportedAt: string
@@ -127,5 +134,5 @@ export type ReportProposal = {
   documentName: string | null
   observations: ObservationProposal[]
   /** Why extraction produced nothing, when it produced nothing. */
-  notice: string | null
+  notice: ProposalNotice | null
 }

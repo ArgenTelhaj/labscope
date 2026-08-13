@@ -503,7 +503,7 @@ This is where "medical design system" earns its name — it is a safety system w
 7. **Uncertainty is shown, not smoothed.** Extraction confidence, missing ranges, and method changes are visible states with their own visual treatment, not hidden failures.
 8. **Accessibility as a hard requirement.** WCAG AA minimum. Users of this app are disproportionately elderly, ill, or anxious — dynamic type, 44px targets, screen-reader-correct tables, and no reliance on hover. Mobile-first is right, and it means designing for a tired person in a waiting room with one hand free.
 9. **Print and PDF are first-class targets.** See §10.
-10. **Localisation from the schema up.** Analyte display names, units, and date formats are locale-dependent, and lab reports arrive in the local language. This is a data-model concern, not a string-file concern.
+10. **Localisation from the schema up.** Analyte display names, units, and date formats are locale-dependent, and lab reports arrive in the local language. This is a data-model concern, not a string-file concern. See §9.2 for how the two halves divide: interface text is a label with translations, report content is never translated.
 
 **Core components** (roughly the build order): value card with range band · range band primitive (positional, the atom of the system) · sparkline · analyte trend chart · panel table · timeline row · document viewer with region highlight · review/correction form · confidence chip · provenance chip · context-event marker · share sheet · empty and low-data states (which you will show more often than you expect, and which most apps neglect).
 
@@ -542,6 +542,59 @@ grouping honest (§4.5). See `docs/image-needs.md` for the set and the rendering
 **Voice.** Warm, plain, gently confident. Numbers over adjectives. Never alarmist, never cutesy.
 "Everything is where your lab said it should be" — a restatement of the reports, not a verdict on the
 person.
+
+### 9.2 Language — the label system
+
+*Shipped: English and Albanian, August 2026.*
+
+Principle 10 says localisation is a data-model concern rather than a string-file concern. Both halves
+are now built, and the split between them is the rule to hold:
+
+**Interface text is translated. Report content never is.** Everything the app says in its own voice —
+headings, buttons, footnotes, status words, accessibility labels, date wording — is a label. Everything
+the app read off a report — the analyte name, the value, the unit, the section heading, the performing
+lab, the range qualifier — is printed exactly as the document printed it, in whatever language the
+document was in, in every locale. A bilingual Albanian report puts `Kolesterol total` on the card, and
+it stays `Kolesterol total` for an English reader, because that is the fact the report states (§4.5,
+and the raw-fidelity rule of §6). The panel headings on the results grid are report text, so they are
+never translated either.
+
+**One catalogue, `src/i18n/labels.ts`.** Each label has a **main value** — the source text, in English
+— and one entry per translated locale. A missing translation falls back to the main value, so a
+part-finished language is a partly-English screen, never a blank one or a raw key. Two conventions
+travel with the text rather than with the code:
+
+- `{name}` interpolates a variable, so a translation can put the number, the date or the lab name
+  wherever its own grammar needs it.
+- `[[emphasis]]` marks the stretch of a sentence that is set apart visually — the terracotta phrase in
+  a headline, the bold word in a banner. It is one label rather than three because Albanian does not
+  put the emphasis where English does. `Marked` renders it.
+
+A label whose value is `{ one, other }` is chosen by a `count` variable. English and Albanian are both
+one/other languages; a language that is not would need its own selector in the resolver, not a fan of
+new labels.
+
+**The domain holds no interface text.** `src/domain` derives a status, a panel grouping, a comparator;
+what any of those is *called* lives in the catalogue, keyed off the domain value (`STATUS_SHORT_KEY`,
+`INTERPRETATION_KEY`, `NOTICE_KEY`). Ingestion emits a notice *code* (`ProposalNotice`), not a
+sentence. The one panel the interface names is the catch-all for results whose report printed no
+section heading — the domain leaves its label empty and the UI calls it “Other results” in the
+reader's language, which is naming an absence, not guessing at a grouping.
+
+**Dates are spelled out, not delegated to `Intl`.** `src/i18n/dates.ts` lists month names per locale
+and always renders day-first with a named month. The one thing a date on a lab result must never be is
+ambiguous — `03/04` is two different collection dates depending on where the reader learned to read
+dates — and the wording should not shift with whatever ICU data a browser happens to ship.
+
+**The choice is remembered and is not health data.** A stored preference wins; failing that the
+device's own language, falling back to English. It is the only thing besides reports in
+`localStorage`, and it identifies neither a person nor a result (§11). The switcher sits in the
+sidebar on desktop and in the top bar on a phone, each language written in its own name.
+
+Still open, and genuinely data-model work rather than string work: locale-dependent **units**
+(mmol/L vs mg/dL) with the per-analyte, never-silent conversion of §4.2, and analyte display names
+once canonical identity (LOINC) exists — a canonical analyte can carry a translated display name
+alongside the raw printed label, which is the only way a translated name is ever honest.
 
 **An amendment to principle 3.** Sage now marks in-range values, which is closer to a "good" colour
 than the original system allowed. The line held is in the *wording*: the tag says "In range", never
@@ -697,6 +750,7 @@ type Marker = {
 | Lab verdict columns | A "Result words" / "Vleresimi" column is translated into the lab's flag (Albanian and English). "Very high" is still `H` — only a word that actually says critical produces `HH`/`LL`. |
 | Storage | `localStorage` in the browser. No backend, no network, no analytics — and no source document retained, only its filename and the text line each value came from. |
 | Interpretation | None. No scores, no explanations, no “what this means”. |
+| Language | English and Albanian, from one label catalogue with a main value plus translations (§9.2). Interface text is translated; anything read off a report — analyte name, value, unit, section heading, lab — is shown exactly as printed, in every locale. Units are not yet locale-aware. |
 
 ### Concrete next steps, in order
 

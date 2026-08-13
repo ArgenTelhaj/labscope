@@ -1,6 +1,6 @@
-import { formatDate } from '../domain/series'
 import type { Report } from '../domain/types'
 import { formatRange } from '../domain/value'
+import { useI18n } from '../i18n'
 import { ProvenanceChip, StatusChip } from '../ui/Chips'
 import { IconChevron, IconDocuments, IconTrash } from '../ui/icons'
 
@@ -14,16 +14,18 @@ export function ReportsScreen({
   onOpenReport: (id: string) => void
   onAdd: () => void
 }) {
+  const { t, d } = useI18n()
+
   if (reports.length === 0) {
     return (
       <div className="empty enter">
         <IconDocuments size={32} />
-        <h2 className="display display--lg">No reports yet</h2>
+        <h2 className="display display--lg">{t('reports.empty.title')}</h2>
         <p className="muted" style={{ maxWidth: '32ch' }}>
-          Every value LabScope shows comes from a report you added, and links back to it.
+          {t('reports.empty.body')}
         </p>
         <button type="button" className="btn btn--primary" onClick={onAdd}>
-          Add a report
+          {t('action.add-report')}
         </button>
       </div>
     )
@@ -40,11 +42,14 @@ export function ReportsScreen({
             onClick={() => onOpenReport(report.id)}
           >
             <div className="result__main">
-              <p className="result__label">{formatDate(report.collectedAt)}</p>
+              <p className="result__label">{d(report.collectedAt)}</p>
               <p className="result__meta">
-                {report.performingLab ?? 'Lab not recorded'} · {report.observations.length}{' '}
-                value{report.observations.length === 1 ? '' : 's'}
-                {report.documentName ? ` · ${report.documentName}` : ' · typed in by hand'}
+                {report.performingLab ?? t('chip.lab-missing')}
+                {' · '}
+                {t('reports.meta.values', { count: report.observations.length })}
+                {report.documentName
+                  ? ` · ${report.documentName}`
+                  : ` · ${t('common.typed-by-hand')}`}
               </p>
             </div>
             <span className="result__chev">
@@ -53,7 +58,7 @@ export function ReportsScreen({
           </button>
         ))}
       </section>
-      <p className="footnote">Sorted by collection date — when the sample was taken.</p>
+      <p className="footnote">{t('reports.footnote')}</p>
     </div>
   )
 }
@@ -66,25 +71,29 @@ export function ReportScreen({
   report: Report
   onDelete: () => void
 }) {
+  const { t, d, dStamp } = useI18n()
+
   return (
     <div className="stack enter">
       <section className="card stack stack--tight">
-        <h2 className="display display--lg">{formatDate(report.collectedAt)}</h2>
+        <h2 className="display display--lg">{d(report.collectedAt)}</h2>
         <div className="row row--wrap" style={{ gap: 'var(--space-2)' }}>
           <ProvenanceChip lab={report.performingLab} />
           {report.fasting !== null && (
-            <span className="chip">{report.fasting ? 'Fasting' : 'Not fasting'}</span>
+            <span className="chip">
+              {report.fasting ? t('report.fasting') : t('report.not-fasting')}
+            </span>
           )}
           {report.reportedAt && (
-            <span className="chip">Reported {formatDate(report.reportedAt)}</span>
+            <span className="chip">{t('report.reported-on', { date: d(report.reportedAt) })}</span>
           )}
         </div>
         <p className="footnote">
           {report.documentName
-            ? `Read from ${report.documentName}`
-            : 'Entered by hand — no source document'}
+            ? t('report.read-from', { name: report.documentName })
+            : t('report.entered-by-hand')}
           {' · '}
-          confirmed {new Date(report.committedAt).toLocaleDateString('en-GB')}
+          {t('report.confirmed-on', { date: dStamp(report.committedAt) })}
         </p>
       </section>
 
@@ -101,7 +110,7 @@ export function ReportScreen({
             <div className="row row--wrap" style={{ gap: 'var(--space-2)' }}>
               <StatusChip observation={o} />
               <span className="muted">
-                {formatRange(o.referenceRange) ?? 'No range printed on this report'}
+                {formatRange(o.referenceRange) ?? t('report.no-range')}
               </span>
             </div>
           </div>
@@ -110,11 +119,9 @@ export function ReportScreen({
 
       <button type="button" className="btn btn--danger btn--block" onClick={onDelete}>
         <IconTrash />
-        Delete this report and its values
+        {t('report.delete')}
       </button>
-      <p className="footnote">
-        Deleting removes the report and everything read from it from this browser.
-      </p>
+      <p className="footnote">{t('report.delete.footnote')}</p>
     </div>
   )
 }

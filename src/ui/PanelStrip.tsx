@@ -1,5 +1,6 @@
 import type { Series } from '../domain/series'
-import { positionInRange, statusOf, STATUS_SHORT } from '../domain/value'
+import { positionInRange, statusOf } from '../domain/value'
+import { STATUS_SHORT_KEY, useI18n, type Translate } from '../i18n'
 import { clamp } from './scale'
 
 /**
@@ -22,6 +23,7 @@ const BOTTOM = HEIGHT - 6
 const MAX_COLUMNS = 14
 
 export function PanelStrip({ series }: { series: Series[] }) {
+  const { t } = useI18n()
   const shown = series.slice(0, MAX_COLUMNS)
   const width = Math.max(shown.length * COLUMN, COLUMN)
 
@@ -32,7 +34,7 @@ export function PanelStrip({ series }: { series: Series[] }) {
       width={width}
       height={HEIGHT}
       role="img"
-      aria-label={ariaFor(series)}
+      aria-label={ariaFor(series, t)}
       focusable="false"
     >
       {shown.map((s, i) => {
@@ -80,11 +82,13 @@ export function PanelStrip({ series }: { series: Series[] }) {
   )
 }
 
-function ariaFor(series: Series[]): string {
+function ariaFor(series: Series[], t: Translate): string {
   const counts = new Map<string, number>()
   for (const s of series) {
-    const short = STATUS_SHORT[statusOf(s.latest.observation)]
+    const short = t(STATUS_SHORT_KEY[statusOf(s.latest.observation)])
     counts.set(short, (counts.get(short) ?? 0) + 1)
   }
-  return [...counts].map(([label, n]) => `${n} ${label.toLowerCase()}`).join(', ')
+  return [...counts]
+    .map(([status, count]) => t('panel.strip.aria', { count, status: status.toLowerCase() }))
+    .join(', ')
 }
